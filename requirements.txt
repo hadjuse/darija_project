@@ -1,0 +1,26 @@
+# Core numerical and data libraries
+numpy
+pandas
+scikit-learn
+tqdm
+
+# Audio processing
+librosa
+soundfile
+
+# Deep learning
+torch
+torchaudio
+
+# Visualization
+matplotlib
+
+# Dataset loading / Hugging Face
+datasets
+huggingface_hub
+
+# Notebook utilities
+ipython
+
+# DiffWave implementation
+git+https://github.com/lmnt-com/diffwave.git
