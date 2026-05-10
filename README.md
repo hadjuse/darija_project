@@ -76,8 +76,8 @@ Lien vers le dataset :
 ### 1. Cloner le dépôt
 
 ```bash
-git clone <URL_DU_REPO>
-cd <NOM_DU_REPO>
+git clone https://github.com/hadjuse/darija_project.git
+cd darija_project
 ```
 
 ### 2. Installer les dépendances
