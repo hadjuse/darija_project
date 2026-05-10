@@ -263,7 +263,6 @@ Les principales ressources utilisées pour ce projet sont :
 
 ## Remarques
 
-- Le dépôt contient à la fois une branche **from scratch** et une branche **fine-tuning**.
 - Les résultats du modèle from scratch à **50 000 steps** correspondent au meilleur entraînement obtenu dans nos expériences.
 - Le fine-tuning a été réalisé à partir d’un modèle pré-entraîné sur **LJSpeech**, puis adapté sur DODa.
 - Les principaux résultats sont fournis dans `results/` afin de faciliter la consultation du projet.
