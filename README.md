@@ -293,3 +293,14 @@ The **50k from-scratch** run is the best model overall.
 - Ho et al. (2020), *Denoising Diffusion Probabilistic Models*
 - Bidry et al. (2025), *DODa — Moroccan Darija Speech Dataset*
 - van den Oord et al. (2016), *WaveNet: A Generative Model for Raw Audio*
+
+```
+@misc{darija_speech_dataset,
+  author = {BIDRY Mahmoud, ZAIDOUNE Youssef, et al.},
+  title = {Moroccan Darija Speech Dataset},
+  year = {2025},
+  organization = {atlasIA}
+  howpublished = {Hugging Face Datasets},
+  url = {https://huggingface.co/datasets/atlasia/DODa-audio-dataset-V3}
+}
+```
