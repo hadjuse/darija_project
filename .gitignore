@@ -1,0 +1,4 @@
+__pycache__
+data_preprocessed/*
+runs
+data_preprocessed

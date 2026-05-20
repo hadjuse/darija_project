@@ -19,6 +19,9 @@ matplotlib
 datasets
 huggingface_hub
 
+# Configuration
+pyyaml
+
 # Notebook utilities
 ipython
 

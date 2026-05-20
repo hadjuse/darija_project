@@ -1,0 +1,39 @@
+# ============================================================
+# DiffWave-Darija — Configuration par défaut
+# Paramètres DiffWave BASE (Kong et al. 2021, section 5.1)
+# ============================================================
+
+# --- Audio / Mel ---
+sample_rate: 22050
+n_fft: 1024
+hop_length: 256
+win_length: 1024
+n_mels: 80
+f_min: 0.0
+f_max: 8000.0
+power: 1.0
+log_offset: 1.0e-5
+clip_val: -11.5
+crop_mel_frames: 62      # frames Mel par exemple (DiffWave params)
+
+# --- Chemins ---
+data_dir: data_preprocessed
+runs_dir: runs
+experiment_name: diffwave_doda
+
+# --- Entraînement ---
+batch_size: 4
+num_workers: 2
+learning_rate: 2.0e-4
+max_steps: 50000
+log_every: 25
+valid_every: 15000
+save_every: 15000
+valid_max_batches: 20
+grad_clip: 1.0
+stft_weight: 0.1
+use_amp: true            # AMP (float16) — désactivé automatiquement si CPU
+
+# --- Génération ---
+num_examples: 5
+pretrained_path: null    # null = from scratch ; chemin = fine-tuning

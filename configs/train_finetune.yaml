@@ -1,0 +1,9 @@
+# ============================================================
+# Override : fine-tuning depuis un checkpoint LJSpeech
+# Surcharger --pretrained_path à la ligne de commande
+# ============================================================
+experiment_name: diffwave_doda_finetune
+max_steps: 10000
+valid_every: 1000
+save_every: 1000
+pretrained_path: null    # à fournir via --pretrained_path /chemin/vers/ljspeech.pt

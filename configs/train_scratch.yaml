@@ -1,0 +1,10 @@
+# ============================================================
+# Override : entraînement from-scratch (expérience 50k steps)
+# ============================================================
+experiment_name: diffwave_doda_scratch
+max_steps: 100000
+valid_every: 25000
+save_every: 25000
+pretrained_path: null
+data_dir: data_preprocessed
+runs_dir: runs

@@ -1,279 +1,295 @@
-# Synthèse vocale pour le Darija marocain avec DiffWave
+# Moroccan Darija Speech Synthesis with DiffWave
 
-Ce dépôt contient le travail réalisé dans le cadre du projet **GenAI** sur la synthèse vocale du **Darija marocain** à l’aide du modèle **DiffWave** et du dataset **DODa**.
+This repository contains the work done for the **GenAI** project on speech synthesis for **Moroccan Darija** using the **DiffWave** diffusion model and the **DODa** dataset.
 
-Le projet suit un pipeline complet :
+The project covers a complete pipeline:
 
-1. prétraitement des données audio ;
-2. entraînement d’un modèle DiffWave **from scratch** ;
-3. fine-tuning d’un modèle DiffWave pré-entraîné sur LJSpeech ;
-4. génération d’audios ;
-5. évaluation et comparaison des différentes approches.
+1. Audio data preprocessing
+2. Training a DiffWave model **from scratch**
+3. Fine-tuning a DiffWave model pre-trained on LJSpeech
+4. Audio generation
+5. Evaluation and comparison of the two approaches
 
-Le projet a été développé principalement sur **Google Colab**, afin de bénéficier d’un accès à un **GPU** pour l’entraînement. Les modèles de diffusion audio étant coûteux en calcul, l’utilisation de Colab a permis de réaliser des entraînements plus longs que sur nos machines personnelles.
+Originally developed on **Google Colab** for GPU access, the project has been refactored into **standalone Python scripts** that run fully locally.
 
 ---
 
-## Organisation du dépôt
+## Repository Structure
 
-```text
+```
 .
-├── notebooks/
+├── configs/
+│   ├── default.yaml                    # all hyperparameters (single source of truth)
+│   ├── train_scratch.yaml              # overrides for from-scratch training
+│   └── train_finetune.yaml             # overrides for fine-tuning
+│
+├── src/
+│   ├── config.py                       # YAML + argparse config loader
+│   ├── dataset.py                      # DiffWaveDODaDataset + DataLoader factories
+│   ├── diffusion.py                    # DiffusionSchedule (add_noise / p_sample / generate)
+│   ├── losses.py                       # multi-resolution STFT loss
+│   ├── trainer.py                      # training loop, validation, checkpointing
+│   └── plotting.py                     # loss curves, waveform & mel comparisons
+│
+├── scripts/
+│   ├── preprocess.py                   # download DODa, preprocess, save wavs + mels + CSVs
+│   ├── train.py                        # train from scratch or fine-tune
+│   ├── generate.py                     # generate audio from a saved checkpoint
+│   └── evaluate.py                     # compare multiple runs
+│
+├── notebooks/                          # original Colab notebooks (kept as reference)
 │   ├── 01_preprocessing_doda.ipynb
 │   ├── 02_diffwave_from_scratch_training_generation.ipynb
 │   ├── 03_diffwave_training_fine_tuned_10k.ipynb
-│   └── 04_evaluation_results.ipynb
+│   └── 04_evaluation_resultas.ipynb
 │
-├── results/
+├── Diffwave_training_generation50k_steps.ipynb   # main 50k-step notebook
+│
+├── results/                            # pre-computed results (figures, audios, CSVs)
 │   ├── results_10000_steps/
-│   │   ├── figures/
-│   │   ├── generated_audios/
-│   │   └── results_csv/
-│   │
 │   ├── results_50000_steps/
-│   │   ├── checkpoints_pt/
-│   │   ├── figures/
-│   │   ├── generated_audios/
-│   │   └── results_csv/
-│   │
 │   └── results_fine_tuning_10000/
-│       ├── figures/
-│       ├── generated_audios/
-│       └── results_csv/
 │
-├── README.md
+├── tests/
+│   └── test_pipeline.py                # CPU smoke test (no GPU, no real data needed)
+│
 ├── requirements.txt
-└── .gitignore
+└── README.md
 ```
 
 ---
 
-## Dataset utilisé
+## Dataset
 
-Le projet utilise le dataset **DODa — Moroccan Darija Speech Dataset**, disponible sur Hugging Face.
+The project uses the **DODa — Moroccan Darija Speech Dataset**, available on Hugging Face.
 
-DODa contient des échantillons audio en Darija marocain accompagnés de transcriptions. Dans notre projet, nous avons conservé uniquement les voix masculines afin de réduire la variabilité acoustique pendant l’entraînement.
+DODa contains audio samples in Moroccan Darija with transcriptions. Only **male voices** are used to reduce acoustic variability during training.
 
-Après filtrage, le corpus utilisé contient :
+After filtering:
 
-- **8012 exemples** ;
-- environ **6,26 heures d’audio** ;
-- **3 locuteurs masculins** : M1, M2 et M3.
+| Split | Examples |
+|-------|-------:|
+| Train | 6,489 |
+| Val   | 721   |
+| Test  | 802   |
+| **Total** | **8,012** |
 
-Les données sont ensuite réparties en trois ensembles :
-
-- **6489** exemples pour l’entraînement ;
-- **721** exemples pour la validation ;
-- **802** exemples pour le test.
-
-Lien vers le dataset :  
-[DODa — Moroccan Darija Speech Dataset](https://huggingface.co/datasets/atlasia/DODa-audio-dataset)
+- ~**6.26 hours** of audio
+- **3 male speakers**: M1, M2, M3
+- Dataset: [atlasia/DODa-audio-dataset](https://huggingface.co/datasets/atlasia/DODa-audio-dataset) (public, no token required)
 
 ---
 
-## Installation
+## Local Setup with `uv`
 
-### 1. Cloner le dépôt
+[`uv`](https://github.com/astral-sh/uv) is a fast Python package manager. It handles virtual environments and dependencies in one command.
+
+### 1. Install `uv`
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### 2. Clone the repository
 
 ```bash
 git clone https://github.com/hadjuse/darija_project.git
 cd darija_project
 ```
 
-### 2. Installer les dépendances
+### 3. Create the virtual environment and install dependencies
 
 ```bash
-pip install -r requirements.txt
+uv venv .venv
+source .venv/bin/activate       # Linux / macOS
+# .venv\Scripts\activate        # Windows
+
+uv pip install -r requirements.txt
 ```
 
-Le projet repose principalement sur :
+> **Note:** The DiffWave package is installed directly from GitHub — `uv` handles this automatically from `requirements.txt`.
 
-- **PyTorch** pour l’entraînement des modèles ;
-- **torchaudio**, **librosa** et **soundfile** pour le traitement audio ;
-- **datasets** pour le chargement du dataset DODa depuis Hugging Face ;
-- l’implémentation de **DiffWave** disponible sur GitHub.
+### 4. Verify the installation
+
+```bash
+python tests/test_pipeline.py
+```
+
+This smoke test runs 10 training steps on synthetic data (CPU only, no dataset needed). Expected output:
+
+```
+==================================================
+SMOKE TEST — DiffWave-Darija (CPU)
+==================================================
+Test 1 : DiffWaveDODaDataset.__getitem__  ✓
+Test 2 : stft_loss                        ✓
+Test 3 : DiffusionSchedule               ✓
+Test 4 : training loop (10 steps)        ✓
+Test 5 : audio generation                ✓
+==================================================
+Result : 5 passed, 0 failed
+==================================================
+```
 
 ---
 
-## Exécution du projet
+## Running the Pipeline Locally
 
-Les notebooks doivent être exécutés dans l’ordre suivant :
+### Step 1 — Preprocess the data
 
-```text
-01_preprocessing_doda.ipynb
-02_diffwave_from_scratch_training_generation.ipynb
-03_diffwave_training_fine_tuned_10k.ipynb
-04_evaluation_results.ipynb
+Downloads DODa from Hugging Face, filters male voices, extracts mel spectrograms, and creates the train/val/test splits.
+
+```bash
+python scripts/preprocess.py --config configs/default.yaml
 ```
 
-### `01_preprocessing_doda.ipynb`
+Output written to `data_preprocessed/`:
 
-Ce notebook prépare les données utilisées par les modèles :
-
-- chargement du dataset DODa depuis Hugging Face ;
-- reconstruction du mapping entre indices, locuteurs et genres ;
-- filtrage des voix masculines ;
-- analyse exploratoire du corpus ;
-- conversion des audios en mono ;
-- rééchantillonnage à 22 050 Hz ;
-- normalisation des signaux ;
-- extraction des spectrogrammes Mel ;
-- création des splits `train`, `validation` et `test`.
-
-À la fin de cette étape, un dossier de données prétraitées est généré :
-
-```text
+```
 data_preprocessed/
-├── wavs/
-├── mels/
+├── wavs/           # 8,012 .wav files at 22,050 Hz
+├── mels/           # 8,012 .npy mel spectrograms
 ├── train.csv
 ├── val.csv
 ├── test.csv
 └── summary.json
 ```
 
-### `02_diffwave_from_scratch_training_generation.ipynb`
-
-Ce notebook entraîne DiffWave **from scratch**, c’est-à-dire à partir de poids initialisés aléatoirement, sans utiliser de modèle pré-entraîné.
-
-Il contient :
-
-- le chargement des données prétraitées ;
-- la création des `Dataset` et `DataLoader` PyTorch ;
-- l’entraînement du modèle ;
-- la sauvegarde des checkpoints ;
-- la génération d’audios à partir des spectrogrammes Mel du jeu de test ;
-- la sauvegarde des courbes de loss, des spectrogrammes et des waveforms.
-
-Deux entraînements from scratch ont été conservés dans les résultats :
-
-- un entraînement à **10 000 steps** ;
-- un entraînement à **50 000 steps**.
-
-### `03_diffwave_training_fine_tuned_10k.ipynb`
-
-Ce notebook entraîne une seconde version du modèle par **fine-tuning**.
-
-Contrairement au modèle from scratch, celui-ci part d’un checkpoint DiffWave pré-entraîné sur **LJSpeech**, puis est adapté au dataset DODa pendant **10 000 steps**.
-
-Cette branche permet de comparer :
-
-- un modèle qui apprend uniquement à partir du Darija ;
-- un modèle qui bénéficie d’une connaissance préalable de la parole acquise sur l’anglais.
-
-### `04_evaluation_results.ipynb`
-
-Ce notebook regroupe l’évaluation finale du projet.
-
-Il permet notamment de :
-
-- comparer les courbes d’apprentissage ;
-- écouter les audios générés ;
-- comparer les waveforms ;
-- comparer les spectrogrammes Mel ;
-- analyser les différences entre l’approche **from scratch** et l’approche **fine-tuning**.
+> If you have a token: `python scripts/preprocess.py --hf_token hf_xxxx` or `export HF_TOKEN=hf_xxxx`.
 
 ---
 
-## Données prétraitées
+### Step 2 — Train (from scratch, 50k steps)
 
-Les données audio prétraitées ne sont pas incluses dans le dépôt GitHub, car elles sont volumineuses.
+Reproduces the best experiment from the notebook:
 
-Elles sont générées automatiquement par le notebook de prétraitement à partir du dataset DODa. Après exécution, l’organisation attendue est la suivante :
-
-```text
-data_preprocessed/
-├── wavs/        # fichiers audio prétraités
-├── mels/        # spectrogrammes Mel au format .npy
-├── train.csv
-├── val.csv
-├── test.csv
-└── summary.json
+```bash
+python scripts/train.py --config configs/train_scratch.yaml
 ```
 
-### Utilisation sous Google Colab
+Key options:
 
-Le projet manipule plusieurs milliers de petits fichiers audio et de spectrogrammes. Lors des premiers essais, la lecture directe depuis Google Drive ralentissait fortement l’entraînement.
+```bash
+# Override any parameter inline
+python scripts/train.py --config configs/train_scratch.yaml \
+    --experiment_name my_run \
+    --max_steps 50000
 
-Pour cette raison, les données prétraitées sont stockées sur Google Drive, puis copiées temporairement dans l’espace local de Colab (`/content`) avant l’entraînement. Cette organisation permet :
+# Resume an interrupted training
+python scripts/train.py --config configs/train_scratch.yaml \
+    --resume runs/diffwave_doda_scratch/checkpoints/last.pt
 
-- de conserver les données et les résultats sur Drive ;
-- d’accélérer les accès disque pendant les entraînements ;
-- d’éviter de dépendre uniquement des ressources locales de nos ordinateurs.
-
----
-
-## Résultats disponibles
-
-Le dossier `results/` contient les principaux résultats obtenus au cours du projet, afin qu’ils puissent être consultés sans avoir à relancer tous les entraînements.
-
-```text
-results/
-├── results_10000_steps/
-├── results_50000_steps/
-└── results_fine_tuning_10000/
+# Fine-tune from a pre-trained LJSpeech checkpoint
+python scripts/train.py --config configs/train_finetune.yaml \
+    --pretrained_path /path/to/diffwave-ljspeech.pt
 ```
 
-Chaque dossier contient, selon les expériences :
+Outputs are saved in `runs/<experiment_name>/`:
 
-- les figures générées ;
-- quelques audios produits par le modèle ;
-- les fichiers CSV contenant les losses ;
-- pour le modèle from scratch à 50 000 steps, les checkpoints sauvegardés.
-
-Les résultats permettent notamment de comparer :
-
-- l’évolution du modèle from scratch entre **10 000** et **50 000 steps** ;
-- le modèle **from scratch** avec le modèle **fine-tuné**.
-
-Les données complètes et les fichiers les plus volumineux ne sont pas versionnés dans le dépôt afin de conserver une structure légère.
+```
+runs/diffwave_doda_scratch/
+├── checkpoints/
+│   ├── best.pt      # lowest validation loss
+│   ├── last.pt      # most recent periodic save
+│   └── final.pt     # end of training
+├── figures/
+│   ├── training_loss.png
+│   └── validation_loss.png
+├── generated_audios/
+└── results_csv/
+    ├── training_losses.csv
+    └── validation_losses.csv
+```
 
 ---
 
-## Configuration audio utilisée
+### Step 3 — Generate audio
 
-| Paramètre | Valeur |
-|---|---:|
-| Fréquence d’échantillonnage | 22 050 Hz |
-| Nombre de bandes Mel | 80 |
+Generate audio samples from a saved checkpoint:
+
+```bash
+python scripts/generate.py \
+    --checkpoint runs/diffwave_doda_scratch/checkpoints/best.pt \
+    --num_examples 5
+```
+
+Saves `.wav` files and waveform / mel comparison figures.
+
+---
+
+### Step 4 — Evaluate and compare runs
+
+```bash
+python scripts/evaluate.py \
+    --runs runs/diffwave_doda_scratch runs/diffwave_doda_finetune \
+    --labels "From scratch 50k" "Fine-tune 10k" \
+    --output_dir runs/evaluation
+```
+
+Produces overlaid training/validation curves and a summary table.
+
+---
+
+## Audio Configuration
+
+| Parameter | Value |
+|-----------|------:|
+| Sample rate | 22,050 Hz |
+| Mel bands | 80 |
 | `n_fft` | 1024 |
 | `hop_length` | 256 |
 | `win_length` | 1024 |
-| Fréquence maximale | 8000 Hz |
+| Max frequency | 8,000 Hz |
+| Crop mel frames | 62 |
+| Audio length per sample | 15,872 samples |
 
 ---
 
-## Ressources utilisées
+## Model
 
-Les principales ressources utilisées pour ce projet sont :
+DiffWave with default parameters from [lmnt-com/diffwave](https://github.com/lmnt-com/diffwave):
 
-- l’implémentation officielle de **DiffWave** :  
-  [lmnt-com/diffwave](https://github.com/lmnt-com/diffwave)
+| Parameter | Value |
+|-----------|------:|
+| Residual layers | 30 |
+| Residual channels | 64 |
+| Diffusion steps | 50 |
+| Trainable parameters | 2,619,971 |
 
-- l’article original présentant le modèle :  
-  [DiffWave: A Versatile Diffusion Model for Audio Synthesis](https://openreview.net/forum?id=a-xFK8Ymz5J)
-
-- le cours Hugging Face sur les modèles de diffusion audio, utilisé pour mieux comprendre le principe de génération audio et le rôle des spectrogrammes Mel :  
-  [Hugging Face Diffusion Course — Unit 4](https://huggingface.co/learn/diffusion-course/unit4/3)
-
-- le dataset utilisé :  
-  [DODa — Moroccan Darija Speech Dataset](https://huggingface.co/datasets/atlasia/DODa-audio-dataset)
-
----
-
-## Remarques
-
-- Les résultats du modèle from scratch à **50 000 steps** correspondent au meilleur entraînement obtenu dans nos expériences.
-- Le fine-tuning a été réalisé à partir d’un modèle pré-entraîné sur **LJSpeech**, puis adapté sur DODa.
-- Les principaux résultats sont fournis dans `results/` afin de faciliter la consultation du projet.
-- L’utilisation de **Google Colab avec GPU** est recommandée pour réexécuter les entraînements.
+**Training setup:**
+- Optimizer: Adam, lr = 2e-4
+- Loss: MSE + multi-resolution STFT (weight = 0.1)
+- Gradient clipping: 1.0
+- AMP (float16) enabled automatically when CUDA is available
 
 ---
 
-## Références
+## Pre-computed Results
+
+The `results/` directory contains figures, generated audios and loss CSVs from the three main experiments, so you can inspect them without rerunning training.
+
+| Experiment | Best val loss | Best step |
+|------------|:-------------:|:---------:|
+| From scratch — 10k steps | 0.0326 | 10,000 |
+| From scratch — 50k steps | 0.0322 | 45,000 |
+| Fine-tune LJSpeech — 10k steps | 0.0412 | 5,000 |
+
+The **50k from-scratch** run is the best model overall.
+
+---
+
+## Resources
+
+- DiffWave implementation: [lmnt-com/diffwave](https://github.com/lmnt-com/diffwave)
+- DiffWave paper: [Kong et al. (2021)](https://openreview.net/forum?id=a-xFK8Ymz5J)
+- DODa dataset: [atlasia/DODa-audio-dataset](https://huggingface.co/datasets/atlasia/DODa-audio-dataset)
+- HuggingFace Diffusion Course — Unit 4: [Audio Diffusion](https://huggingface.co/learn/diffusion-course/unit4/3)
+
+---
+
+## References
 
 - Kong et al. (2021), *DiffWave: A Versatile Diffusion Model for Audio Synthesis*
 - Ho et al. (2020), *Denoising Diffusion Probabilistic Models*
 - Bidry et al. (2025), *DODa — Moroccan Darija Speech Dataset*
 - van den Oord et al. (2016), *WaveNet: A Generative Model for Raw Audio*
-
