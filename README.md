@@ -274,7 +274,7 @@ The `results/` directory contains figures, generated audios and loss CSVs from t
 | From scratch — 50k steps | 0.0322 | 45,000 |
 | Fine-tune LJSpeech — 10k steps | 0.0412 | 5,000 |
 
-The **50k from-scratch** run is the best model overall.
+The **100k from-scratch** run is the best model overall.
 
 ---
 
